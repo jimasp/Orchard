@@ -143,6 +143,11 @@
       <Name>Orchard.Framework</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\Core\Orchard.Core.csproj">
+      <Project>{9916839c-39fc-4ceb-a5af-89ca7e87119f}</Project>
+      <Name>Orchard.Core</Name>
+      <Private>False</Private>      
+    </ProjectReference>    
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\Web.config">
