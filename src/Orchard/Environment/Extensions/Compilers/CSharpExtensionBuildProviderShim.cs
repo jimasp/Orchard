@@ -25,6 +25,11 @@ namespace Orchard.Environment.Extensions.Compilers {
         }
 
         public override void GenerateCode(AssemblyBuilder assemblyBuilder) {
+
+            // stop null reference exception being thrown by aspnet_compiler during msbuild
+            if (HostContainer == null)
+                return;
+
             var context = new CompileExtensionContext {
                 VirtualPath = this.VirtualPath,
                 AssemblyBuilder =  new AspNetAssemblyBuilder(assemblyBuilder, this)
