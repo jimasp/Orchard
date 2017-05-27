@@ -12,7 +12,7 @@
     <SqlCeFolder>$(MSBuildProjectDirectory)\lib\sqlce</SqlCeFolder>
     <SourceArtifactFolder>$(ArtifactsFolder)\Source</SourceArtifactFolder>
     <MsDeployArtifactFolder>$(ArtifactsFolder)\MsDeploy</MsDeployArtifactFolder>
-    <GalleryArtifactFolder>$(ArtifactsFolder)\Gallery</GalleryArtifactFolder>
+    <GalleryArtifactFolder>$(ArtifactsFolder)\Gallery</GalleryArtifactFolder>   
     <ModulesSrcFolder>$(MSBuildProjectDirectory)\src\Orchard.Web\Modules</ModulesSrcFolder>
     <OrchardCoreSrcFolder>$(MSBuildProjectDirectory)\src\Orchard.Web\Core</OrchardCoreSrcFolder>
     <ThemesSrcFolder>$(MSBuildProjectDirectory)\src\Orchard.Web\Themes</ThemesSrcFolder>
@@ -89,6 +89,13 @@
     <CallTarget Targets="Package-Stage"/>
     <CallTarget Targets="Package-Precompiled"/>
   </Target>
+
+  <Target Name="PrecompiledViews">
+    <!--<CallTarget Targets="Precompiled"/>  -->
+    <CallTarget Targets="PrepareAspNetCompile"/>
+    <CallTarget Targets="AspNetCompile"/>
+
+  </Target>  
   
   <Target Name="Profiling">
     <CallTarget Targets="Clean"/>
@@ -442,4 +449,54 @@
         ReplacementText="[assembly:${1}${2}${3}(&quot;$(Version)&quot;)${5}]"
         IgnoreCase="True"/>
   </Target>
+
+
+  <Target Name="PrepareAspNetCompile">
+    <CallTarget Targets="CompileMsBuildTasks"/>
+
+    <ItemGroup>
+      <WebProjects Include="$(ModulesSrcFolder)\**\*.csproj" Exclude="Orchard.Web.csproj"/>
+      <WebProjects Include="$(OrchardCoreSrcFolder)\**\Orchard.Core.csproj"/>
+      <WebProjects Include="$(ThemesSrcFolder)\**\*.csproj"/>
+    </ItemGroup>
+
+    <FileUpdateLines Files="@(WebProjects)"
+          Regex="&lt;Private&gt;false&lt;/Private&gt;"
+          ReplacementText="&lt;Private&gt;true&lt;/Private&gt;"
+          IgnoreCase="True"/>    
+
+    <!--<FileUpdateLines Files="@(WebProjects)"
+        Regex="&lt;MvcBuildViews&gt;false&lt;MvcBuildViews&gt;"
+        ReplacementText="&lt;MvcBuildViews&gt;true&lt;MvcBuildViews&gt;"
+        IgnoreCase="True"/>-->          
+
+    <ItemGroup>
+      <WebCompileFolders Include="$(OrchardCoreSrcFolder)"/>
+      <WebCompileFolders Include="$(ThemesSrcFolder)"/>          
+      <WebCompileFolders Include="$([System.IO.Directory]::GetDirectories(&quot;$(ModulesSrcFolder)&quot;))" />      
+    </ItemGroup>
+
+  </Target>
+
+
+  <Target Name="AspNetCompile">
+    <AspNetCompiler VirtualPath="temp" PhysicalPath="%(WebCompileFolders.FullPath)" />  
+  </Target>
+
+  <Target Name="CompleteAspNetCompile">
+    <CallTarget Targets="CompileMsBuildTasks"/>
+
+    <!--<ItemGroup>
+      <WebProjects Include="$(ModulesSrcFolder)\**\*.csproj" Exclude="Orchard.Web.csproj"/>
+      <WebProjects Include="$(OrchardCoreSrcFolder)\**\Orchard.Core.csproj"/>
+      <WebProjects Include="$(ThemesSrcFolder)\**\*.csproj"/>
+    </ItemGroup>-->
+
+    <FileUpdateLines Files="@(WebProjects)"
+          Regex="&lt;Private&gt;false&lt;/Private&gt;"
+          ReplacementText="&lt;Private&gt;true&lt;/Private&gt;"
+          IgnoreCase="True"/>    
+          
+  </Target>
+
 </Project>
