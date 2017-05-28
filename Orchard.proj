@@ -24,8 +24,7 @@
     <PrecompiledFolder>$(BuildFolder)\Precompiled</PrecompiledFolder>
     <ProfilingFolder>$(BuildFolder)\Profiling</ProfilingFolder>
     <GalleryFolder>$(BuildFolder)\Gallery</GalleryFolder>
-
-    <TempFolder>$(BuildFolder)\Temp</TempFolder>
+    <SnapshotFolder>$(BuildFolder)\Snapshot</SnapshotFolder>
 
     <BuildPlatform Condition="$(ProgramW6432) != ''">x64</BuildPlatform>
     <BuildPlatform Condition="$(BuildPlatform) == ''">x86</BuildPlatform>
@@ -44,12 +43,6 @@
     <NUnitPackageFiles Include="$(SrcFolder)\packages\NUnit*\tools\nunit-console.exe" />
     <NUnitPackageToolsFolder Include="@(NUnitPackageFiles->'%(RootDir)%(Directory)'->Distinct())" />
   </ItemGroup>
-
-  <ItemGroup>
-    <WebCompileFolders Include="$(PrecompiledFolder)\Core"/>
-    <WebCompileFolders Include="$(PrecompiledFolder)\Themes"/>          
-    <WebCompileFolders Include="$([System.IO.Directory]::GetDirectories(&quot;$(PrecompiledFolder)\Modules&quot;))" />      
-  </ItemGroup>    
 
   <Import Project="$(LibFolder)\msbuildtasks\MSBuild.Community.Tasks.Targets"/>
   <Import Project="$(LibFolder)\slowcheetah\SlowCheetah.Transforms.targets"/>
@@ -100,11 +93,11 @@
   </Target>
 
   <Target Name="PrecompiledViews">
-    <!--<CallTarget Targets="Precompiled"/> -->  
-    <CallTarget Targets="SnapshotWebCompileFolders"/>
-    <CallTarget Targets="CopyLocal"/>-->
+    <CallTarget Targets="Precompiled"/>
+    <CallTarget Targets="SnapshotPrecompiledFolder"/>
+    <CallTarget Targets="CopyLocal"/>
     <!--<CallTarget Targets="AspNetCompile"/>-->
-    <CallTarget Targets="RestoreWebCompileFolders"/>
+    <CallTarget Targets="RestoreSnapshotPrecompiledFolder"/>
   </Target>  
   
   <Target Name="Profiling">
@@ -460,29 +453,40 @@
         IgnoreCase="True"/>
   </Target>
 
-  <Target Name="SnapshotWebCompileFolders">
-    <ItemGroup><WCFiles Include="%(WebCompileFolders.FullPath)\**\*.*"/></ItemGroup>
-    <Copy SourceFiles="@(WCFiles)" DestinationFolder="$(TempFolder)\%(Directory)%(RecursiveDir)"/>
+  <Target Name="WebCompileFolders">
+    <ItemGroup>
+      <WebCompileFolders Include="$(PrecompiledFolder)\Core"/>
+      <WebCompileFolders Include="$(PrecompiledFolder)\Themes"/>          
+      <WebCompileFolders Include="$([System.IO.Directory]::GetDirectories(&quot;$(PrecompiledFolder)\Modules&quot;))" />      
+    </ItemGroup>    
   </Target>
 
-  <Target Name="RestoreSnapshotWebCompileFolders">
+  <Target Name="SnapshotPrecompiledFolder">
+    <RemoveDir Directories="$(SnapshotFolder)"/>      
+    <ItemGroup><WCFiles Include="$(PrecompiledFolder)\**\*.*"/></ItemGroup>
+    <Copy SourceFiles="@(WCFiles)" DestinationFolder="$(SnapshotFolder)\%(RecursiveDir)"/>
+  </Target>
+
+  <Target Name="RestoreSnapshotPrecompiledFolder" DependsOnTargets="WebCompileFolders">
     <RemoveDir Directories="%(WebCompileFolders.FullPath)"/>
-    <ItemGroup><WCFiles Include="$(TempFolder)\**\*.*"/></ItemGroup>
-    <Copy SourceFiles="@(WCFiles)" DestinationFolder="%(RootDir)\%(RecursiveDir)"/>
-    <RemoveDir Directory="$(TempFolder)"/>
+    <ItemGroup><SnapModules Include="$(SnapshotFolder)\Modules\**\*.*"/></ItemGroup>
+    <Copy SourceFiles="@(SnapModules)" DestinationFolder="$(PrecompiledFolder)\Modules\%(RecursiveDir)"/>
+    <ItemGroup><SnapCore Include="$(SnapshotFolder)\Core\**\*.*"/></ItemGroup>
+    <Copy SourceFiles="@(SnapCore)" DestinationFolder="$(PrecompiledFolder)\Core\%(RecursiveDir)"/>
+    <ItemGroup><SnapThemes Include="$(SnapshotFolder)\Themes\**\*.*"/></ItemGroup>
+    <Copy SourceFiles="@(SnapThemes)" DestinationFolder="$(PrecompiledFolder)\Themes\%(RecursiveDir)"/>
   </Target>    
 
   <Target Name="CopyLocal">
-    <ItemGroup><Dlls Include="$(WebSitesFolder)\Orchard.Web\bin\*.dll"/></ItemGroup>
+    <ItemGroup><Dlls Include="$(PrecompiledFolder)\bin\*.dll"/></ItemGroup>
     <MSBuild Projects="$(MSBuildProjectFile)" Properties="Dll=%(Dlls.FullPath)" Targets="CopyLocalFile"/>
   </Target>
 
-  <Target Name="CopyLocalFile">
-    <Message Text="Copying $(Dll) to %(WebCompileFolders.FullPath)"/>
-    <Copy SourceFiles="$(Dll)" DestinationFolder="%(WebCompileFolders.FullPath)\bin" SkipUnchangedFiles="true" />
+  <Target Name="CopyLocalFile" DependsOnTargets="WebCompileFolders">
+    <Copy SourceFiles="$(Dll)" DestinationFolder="%(WebCompileFolders.FullPath)\bin"/>
   </Target>
 
-  <Target Name="AspNetCompile">
+  <Target Name="AspNetCompile" DependsOnTargets="WebCompileFolders">
     <AspNetCompiler VirtualPath="temp" PhysicalPath="%(WebCompileFolders.FullPath)" />  
   </Target>
 
