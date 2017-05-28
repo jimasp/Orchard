@@ -96,7 +96,7 @@
     <CallTarget Targets="Precompiled"/>
     <CallTarget Targets="SnapshotPrecompiledFolder"/>
     <CallTarget Targets="CopyLocal"/>
-    <!--<CallTarget Targets="AspNetCompile"/>-->
+    <CallTarget Targets="AspNetCompile"/>
     <CallTarget Targets="RestoreSnapshotPrecompiledFolder"/>
   </Target>  
   
