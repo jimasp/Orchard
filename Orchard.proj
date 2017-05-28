@@ -25,6 +25,8 @@
     <ProfilingFolder>$(BuildFolder)\Profiling</ProfilingFolder>
     <GalleryFolder>$(BuildFolder)\Gallery</GalleryFolder>
 
+    <TempFolder>$(BuildFolder)\Temp</TempFolder>
+
     <BuildPlatform Condition="$(ProgramW6432) != ''">x64</BuildPlatform>
     <BuildPlatform Condition="$(BuildPlatform) == ''">x86</BuildPlatform>
     <Configuration Condition="$(Configuration) == ''">Release</Configuration>
@@ -43,8 +45,15 @@
     <NUnitPackageToolsFolder Include="@(NUnitPackageFiles->'%(RootDir)%(Directory)'->Distinct())" />
   </ItemGroup>
 
+  <ItemGroup>
+    <WebCompileFolders Include="$(PrecompiledFolder)\Core"/>
+    <WebCompileFolders Include="$(PrecompiledFolder)\Themes"/>          
+    <WebCompileFolders Include="$([System.IO.Directory]::GetDirectories(&quot;$(PrecompiledFolder)\Modules&quot;))" />      
+  </ItemGroup>    
+
   <Import Project="$(LibFolder)\msbuildtasks\MSBuild.Community.Tasks.Targets"/>
   <Import Project="$(LibFolder)\slowcheetah\SlowCheetah.Transforms.targets"/>
+
 
   <!-- Coordinating Targets -->
 
@@ -91,10 +100,11 @@
   </Target>
 
   <Target Name="PrecompiledViews">
-    <!--<CallTarget Targets="Precompiled"/>  -->
-    <CallTarget Targets="PrepareAspNetCompile"/>
-    <CallTarget Targets="AspNetCompile"/>
-
+    <!--<CallTarget Targets="Precompiled"/> -->  
+    <CallTarget Targets="SnapshotWebCompileFolders"/>
+    <CallTarget Targets="CopyLocal"/>-->
+    <!--<CallTarget Targets="AspNetCompile"/>-->
+    <CallTarget Targets="RestoreWebCompileFolders"/>
   </Target>  
   
   <Target Name="Profiling">
@@ -450,53 +460,30 @@
         IgnoreCase="True"/>
   </Target>
 
-
-  <Target Name="PrepareAspNetCompile">
-    <CallTarget Targets="CompileMsBuildTasks"/>
-
-    <ItemGroup>
-      <WebProjects Include="$(ModulesSrcFolder)\**\*.csproj" Exclude="Orchard.Web.csproj"/>
-      <WebProjects Include="$(OrchardCoreSrcFolder)\**\Orchard.Core.csproj"/>
-      <WebProjects Include="$(ThemesSrcFolder)\**\*.csproj"/>
-    </ItemGroup>
-
-    <FileUpdateLines Files="@(WebProjects)"
-          Regex="&lt;Private&gt;false&lt;/Private&gt;"
-          ReplacementText="&lt;Private&gt;true&lt;/Private&gt;"
-          IgnoreCase="True"/>    
-
-    <!--<FileUpdateLines Files="@(WebProjects)"
-        Regex="&lt;MvcBuildViews&gt;false&lt;MvcBuildViews&gt;"
-        ReplacementText="&lt;MvcBuildViews&gt;true&lt;MvcBuildViews&gt;"
-        IgnoreCase="True"/>-->          
-
-    <ItemGroup>
-      <WebCompileFolders Include="$(OrchardCoreSrcFolder)"/>
-      <WebCompileFolders Include="$(ThemesSrcFolder)"/>          
-      <WebCompileFolders Include="$([System.IO.Directory]::GetDirectories(&quot;$(ModulesSrcFolder)&quot;))" />      
-    </ItemGroup>
-
+  <Target Name="SnapshotWebCompileFolders">
+    <ItemGroup><WCFiles Include="%(WebCompileFolders.FullPath)\**\*.*"/></ItemGroup>
+    <Copy SourceFiles="@(WCFiles)" DestinationFolder="$(TempFolder)\%(Directory)%(RecursiveDir)"/>
   </Target>
 
+  <Target Name="RestoreSnapshotWebCompileFolders">
+    <RemoveDir Directories="%(WebCompileFolders.FullPath)"/>
+    <ItemGroup><WCFiles Include="$(TempFolder)\**\*.*"/></ItemGroup>
+    <Copy SourceFiles="@(WCFiles)" DestinationFolder="%(RootDir)\%(RecursiveDir)"/>
+    <RemoveDir Directory="$(TempFolder)"/>
+  </Target>    
+
+  <Target Name="CopyLocal">
+    <ItemGroup><Dlls Include="$(WebSitesFolder)\Orchard.Web\bin\*.dll"/></ItemGroup>
+    <MSBuild Projects="$(MSBuildProjectFile)" Properties="Dll=%(Dlls.FullPath)" Targets="CopyLocalFile"/>
+  </Target>
+
+  <Target Name="CopyLocalFile">
+    <Message Text="Copying $(Dll) to %(WebCompileFolders.FullPath)"/>
+    <Copy SourceFiles="$(Dll)" DestinationFolder="%(WebCompileFolders.FullPath)\bin" SkipUnchangedFiles="true" />
+  </Target>
 
   <Target Name="AspNetCompile">
     <AspNetCompiler VirtualPath="temp" PhysicalPath="%(WebCompileFolders.FullPath)" />  
-  </Target>
-
-  <Target Name="CompleteAspNetCompile">
-    <CallTarget Targets="CompileMsBuildTasks"/>
-
-    <!--<ItemGroup>
-      <WebProjects Include="$(ModulesSrcFolder)\**\*.csproj" Exclude="Orchard.Web.csproj"/>
-      <WebProjects Include="$(OrchardCoreSrcFolder)\**\Orchard.Core.csproj"/>
-      <WebProjects Include="$(ThemesSrcFolder)\**\*.csproj"/>
-    </ItemGroup>-->
-
-    <FileUpdateLines Files="@(WebProjects)"
-          Regex="&lt;Private&gt;false&lt;/Private&gt;"
-          ReplacementText="&lt;Private&gt;true&lt;/Private&gt;"
-          IgnoreCase="True"/>    
-          
   </Target>
 
 </Project>
